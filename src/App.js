@@ -2,15 +2,8 @@ import React from 'react';
 import {Button, Select, DatePicker, Space} from "antd";
 import myaxios from "./utils/myaxios";
 import './App.css'
-import {data, chartData, handleData} from "./data";
 import moment from "moment";
-import {LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend} from 'recharts';
 import ReactEcharts from 'echarts-for-react';
-
-import {
-    BarChartOutlined,
-    LineChartOutlined,
-} from '@ant-design/icons';
 
 const {Option} = Select;
 const {RangePicker} = DatePicker;
@@ -29,24 +22,18 @@ class App extends React.Component {
             faultLevel: '',
             dateType: 'day',
             dayTime: moment().subtract(7, 'day').format('YYYY-MM-DD') + ' - ' + moment().format('YYYY-MM-DD'),
-            weekTime: moment().subtract(4, 'week').format('YYYY-WW') + ' - ' + moment().format('YYYY-WW'),
+            weekTime: moment().subtract(4, 'week').format('YYYY-WW') + ',' + moment().format('YYYY-WW'),
             monthTime: moment().subtract(3, 'month').format('YYYY-MM') + ' - ' + moment().format('YYYY-MM'),
             dayValue:[moment().subtract(7, 'days'), moment()],
             weekValue:[moment().subtract(4, 'weeks'), moment()],
-            monthValue:[moment().subtract(4, 'months'), moment()]
+            monthValue:[moment().subtract(4, 'months'), moment()],
+            chartData:{},
         }
     }
 
     componentDidMount() {
-        // console.log(handleData(chartData))
-        // myaxios.post('/app.php?g=App&m=Login&a=index',{
-        //     email:'admin',
-        //     password:'Asdf843822'
-        // }).then(res=>{
-        //     console.log(res.data)
-        //
-        // })
         this.getPlatData()
+        this.submitSearch()
     }
 
     getPlatData = () => {
@@ -160,57 +147,129 @@ class App extends React.Component {
         }
         myaxios.get('/?g=Ticket&m=Summarytrend&a=getInfo', {
             params: data
-        }).then(res => console.log(res.data)).catch(error => console.log(error))
+        }).then(res => {
+            this.setState({
+                chartData:res.data
+            })
+        }).catch(error => console.log(error))
     }
+    getOption=()=>{
+        return {
 
+        }
+    }
+    resetForm = ()=>{
+        console.log(this.state)
+    }
     render() {
-        const data1 = [
-            {
-                "name": "Page A",
-                "uv": 4000,
-                "pv": 2400,
-                "amt": 2400
-            },
-            {
-                "name": "Page B",
-                "uv": 3000,
-                "pv": 1398,
-                "amt": 2210
-            },
-            {
-                "name": "Page C",
-                "uv": 2000,
-                "pv": 9800,
-                "amt": 2290
-            },
-            {
-                "name": "Page D",
-                "uv": 2780,
-                "pv": 3908,
-                "amt": 2000
-            },
-            {
-                "name": "Page E",
-                "uv": 1890,
-                "pv": 4800,
-                "amt": 2181
-            },
-            {
-                "name": "Page F",
-                "uv": 2390,
-                "pv": 3800,
-                "amt": 2500
-            },
-            {
-                "name": "Page G",
-                "uv": 3490,
-                "pv": 4300,
-                "amt": 2100
-            }
-        ]
-        const fillColor = ['#8884d8', '#D0D879', '#D86252', '#2E98D8', '#3CD865', '#D836CB', '#79D7D8', '#D8A4A9']
         const {subOption, platForms} = this.state
         const faultTypes = this.state.platForms.find(item => item.name === this.state.selectPlatName) || {children: []}
+        const result = this.state.chartData
+        const seriesConfig=()=> {
+            try{
+                const chartType = result.day_str.length>7?'line':'bar'
+                let chartConfig = {}
+                chartConfig.sertiesConfig = []
+                chartConfig.legendConfig = []
+                for(let item in result.data){
+                    let obj = {
+                        name: item,
+                        type: chartType,
+                        label:{
+                            show:chartType==='bar',
+                            align:'left',
+                            position:'insideBottom',
+                            rotate:90,
+                            verticalAlign:'middle',
+                            distance:15,
+                            formatter: '{a} {c}'
+                        },
+                        data: result.data[item].split(',')
+                    }
+                    chartConfig.sertiesConfig.push(obj)
+                    chartConfig.legendConfig.push(item)
+                }
+                return chartConfig
+            }
+            catch (e) {
+
+            }
+
+        }
+
+        const chartOption = {
+            title: {
+                text: `统计图`,
+                left:'40%',
+                top:'-2%',
+            },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'cross',
+                    label: {
+                        backgroundColor: '#6a7985'
+                    }
+                }
+            },
+            grid:{
+                right:'20%',
+                top:'15%'
+            },
+            toolbox:{
+                show:true,
+                right:'25%',
+                feature:{
+                    magicType: {
+                        type: ['line', 'bar'],
+                        title:{
+                            line :'切换为折线图',
+                            bar :'切换为柱状图'
+                        },
+                        option:{
+                            line:{
+                                label: false
+                            }
+                        }
+                    },
+                    saveAsImage:{title : '保存为图片'},
+                }
+            },
+            legend: {
+                left:'83%',
+                top:'8%',
+                orient:'vertical',
+                icon:'roundRect',
+                align:'left',
+                data:()=>{
+                    try{
+                        return seriesConfig().legendConfig
+                    }
+                    catch (e) {
+
+                    }
+                }
+            },
+            xAxis: {
+                data: ()=>{
+                    try{
+                        return result.day_str
+                    }
+                    catch (e) {
+
+                    }
+                }
+            },
+            yAxis: {},
+            series: ()=>{
+                try{
+                   return  seriesConfig().sertiesConfig
+                }
+                catch (e) {
+
+                }
+            }
+        }
         return (
             <div className="App">
                 <div className="formBox">
@@ -268,37 +327,17 @@ class App extends React.Component {
 
 
                         <Button type="primary" onClick={this.submitSearch}>查询</Button>
-                        <Button>重置</Button>
+                        <Button onClick={this.resetForm}>重置</Button>
                     </Space>
 
                 </div>
                 <div className="chartBox">
-                    <div className='titlebox'>
-                        <h2>
-                            这是图表标题
-                        </h2>
-                        <div className="tool">
-                            <LineChartOutlined style={{fontSize: '20px', marginRight: '10px', cursor: 'pointer'}}/>
-                            <BarChartOutlined style={{fontSize: '20px', cursor: 'pointer'}}/>
-                        </div>
-                    </div>
-                    <LineChart width={1600} height={600} data={handleData(chartData).result}
-                               margin={{top: 5, right: 30, left: 20, bottom: 5}}
-                    >
-                        <CartesianGrid strokeDasharray="3 3"/>
-                        <XAxis dataKey="name"/>
-                        <YAxis/>
-                        <Tooltip/>
-                        <Legend layout='vertical' align='right' verticalAlign='top' wrapperStyle={{right: 10}}/>
-                        {
-                            handleData(chartData).cate_name.map((item, index) => (
-                                <Line type="monotone" dataKey={item} stroke={fillColor[index]} key={item}/>
-                            ))
-                        }
-                        {/*<Bar type="monotone" dataKey="【LH项目】" fill="#8884d8" />*/}
-                        {/*<Bar type="monotone" dataKey="pv" fill="#82ca9d" />*/}
-                        {/*<Bar type="monotone" dataKey="amt" fill="#cccccc" />*/}
-                    </LineChart>
+                    {
+                        this.state.chartData.day_str?(<ReactEcharts
+                            option={{...this.getOption(),...chartOption}}
+                        />):null
+                    }
+
                 </div>
             </div>
         );
