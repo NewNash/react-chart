@@ -1,7 +1,9 @@
 import axios from 'axios'
 
-const myaxios = axios.create()
-myaxios.baseUrl = 'http://192.168.0.50'
+const myaxios = axios.create({
+    baseURL: 'http://192.168.0.50',
+    timeout: 4000,
+})
 myaxios.interceptors.request.use((config) => {
         if (localStorage.getItem('token')) {
             config.headers.token = localStorage.getItem('token')
