@@ -2,9 +2,14 @@
     padding: 20px;
 }
 .chartBox{
-    padding: 20px;
-}
-.titlebox{
+    margin-top: 20px;
+    width: 100%;
+    height: 600px;
+    padding:20px;
     display: flex;
-    justify-content: space-around;
+    justify-content: center;
+    align-items: center;
+}
+.formBox{
+    padding: 20px 0 20px 40px;
 }

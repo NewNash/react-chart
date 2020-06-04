@@ -1,41 +1,46 @@
 import React from 'react';
-import {Button, Select, DatePicker, Space} from "antd";
+import {Button, Select, DatePicker, Space,message} from "antd";
 import myaxios from "./utils/myaxios";
 import './App.css'
+import Mychart from './components/myChart'
 import moment from "moment";
-import ReactEcharts from 'echarts-for-react';
-
 const {Option} = Select;
 const {RangePicker} = DatePicker;
+
+const initState = {
+    sumType: 1,
+    sumTypeName:'问题',
+    selectPlat: "-1",
+    selectPlatName: '所有平台',
+    selectFaultType: "-1",
+    selectFaultTypeName:'所有类型',
+    subOption: 'faultType',
+    selectFaultLevel: "-1",
+    selectFaultLevelName:'全部级别',
+    dateType: 'day',
+    dayTime: moment().subtract(7, 'day').format('YYYY-MM-DD') + ' - ' + moment().format('YYYY-MM-DD'),
+    weekTime: moment().subtract(4, 'week').format('YYYY-WW') + ',' + moment().format('YYYY-WW'),
+    monthTime: moment().subtract(3, 'month').format('YYYY-MM') + ' - ' + moment().format('YYYY-MM'),
+    dayValue: [moment().subtract(7, 'days'), moment()],
+    weekValue: [moment().subtract(4, 'weeks'), moment()],
+    monthValue: [moment().subtract(4, 'months'), moment()],
+}
 
 class App extends React.Component {
     constructor(props) {
         super(props)
         this.state = {
-            sumType: 1,
             platForms: [],
-            selectPlat: "-1",
-            selectPlatName: '',
-            selectFaultType: "-1",
-            subOption: 'faultType',
-            selectFaultLevel: "-1",
-            faultLevel: '',
-            dateType: 'day',
-            dayTime: moment().subtract(7, 'day').format('YYYY-MM-DD') + ' - ' + moment().format('YYYY-MM-DD'),
-            weekTime: moment().subtract(4, 'week').format('YYYY-WW') + ',' + moment().format('YYYY-WW'),
-            monthTime: moment().subtract(3, 'month').format('YYYY-MM') + ' - ' + moment().format('YYYY-MM'),
-            dayValue:[moment().subtract(7, 'days'), moment()],
-            weekValue:[moment().subtract(4, 'weeks'), moment()],
-            monthValue:[moment().subtract(4, 'months'), moment()],
-            chartData:{},
+            chartData: {},
+            showLoading: true,
+            firstLoading: true,
+            ...initState
         }
     }
-
     componentDidMount() {
         this.getPlatData()
         this.submitSearch()
     }
-
     getPlatData = () => {
         myaxios.get('/?g=Ticket&m=Summarytrend&a=getAllCatAndtreeDb').then(res => {
             let platForms = []
@@ -52,34 +57,37 @@ class App extends React.Component {
             })
         })
     }
-    sumTypeChange = e => {
-        if (e === 3) {
+    sumTypeChange = (value,option) => {
+        if (value === 3) {
             this.setState({
-                sumType: e,
+                sumType: value,
+                sumTypeName:option.children,
                 subOption: 'faultLevel'
             })
         } else {
             this.setState({
-                sumType: e,
+                sumType: value,
+                sumTypeName:option.children,
                 subOption: 'faultType'
             })
         }
     }
-    platFormChange = (e, e1) => {
+    platFormChange = (value, option) => {
         this.setState({
-            selectPlat: e,
-            selectPlatName: e1.children
+            selectPlat: value,
+            selectPlatName: option.children
         })
     }
-    faultLevelChange = (e) => {
+    faultLevelChange = (value, option) => {
         this.setState({
-            faultLevel: e,
-            selectFaultLevel: e
+            selectFaultLevel: value,
+            selectFaultLevelName:option.children
         })
     }
-    faultTypeChange = e => {
+    faultTypeChange = (value, option) => {
         this.setState({
-            selectFaultType: e,
+            selectFaultType: value,
+            selectFaultTypeName:option.children
         })
     }
     dateTypeChange = (e) => {
@@ -109,25 +117,20 @@ class App extends React.Component {
             case 'day':
                 this.setState({
                     dayTime: time,
-                    weekTime: '',
-                    monthTime: '',
-                    dayValue:date,
+                    dayValue: date,
                 })
                 break
             case "week":
+                let weekTime = time.replace(' - ',',')
                 this.setState({
-                    dayTime: '',
-                    weekTime: time,
-                    monthTime: '',
-                    weekValue:date,
+                    weekTime,
+                    weekValue: date,
                 })
                 break
             case "month":
                 this.setState({
-                    dayTime: '',
-                    weekTime: '',
                     monthTime: time,
-                    monthValue:date
+                    monthValue: date
                 })
                 break
             default:
@@ -135,6 +138,10 @@ class App extends React.Component {
         }
     }
     submitSearch = () => {
+
+        this.setState({
+            showLoading: true,
+        })
         const data = {
             count_type: this.state.sumType,
             category_id: this.state.selectPlat,
@@ -149,132 +156,47 @@ class App extends React.Component {
             params: data
         }).then(res => {
             this.setState({
-                chartData:res.data
+                chartData: res.data,
+                showLoading: false,
+                firstLoading: false
             })
-        }).catch(error => console.log(error))
+        }).catch(error => {
+            message.error('获取数据失败，请刷新页面重试')
+        })
     }
-    getOption=()=>{
-        return {
 
-        }
+    resetForm = () => {
+        this.setState({
+            ...initState
+        })
     }
-    resetForm = ()=>{
-        console.log(this.state)
-    }
+
     render() {
         const {subOption, platForms} = this.state
         const faultTypes = this.state.platForms.find(item => item.name === this.state.selectPlatName) || {children: []}
-        const result = this.state.chartData
-        const seriesConfig=()=> {
-            try{
-                const chartType = result.day_str.length>7?'line':'bar'
-                let chartConfig = {}
-                chartConfig.sertiesConfig = []
-                chartConfig.legendConfig = []
-                for(let item in result.data){
-                    let obj = {
-                        name: item,
-                        type: chartType,
-                        label:{
-                            show:chartType==='bar',
-                            align:'left',
-                            position:'insideBottom',
-                            rotate:90,
-                            verticalAlign:'middle',
-                            distance:15,
-                            formatter: '{a} {c}'
-                        },
-                        data: result.data[item].split(',')
-                    }
-                    chartConfig.sertiesConfig.push(obj)
-                    chartConfig.legendConfig.push(item)
-                }
-                return chartConfig
-            }
-            catch (e) {
+        const platFormName = this.state.selectPlatName
+        const faultTypeName = this.state.selectFaultTypeName
+        const faultLevelName = this.state.selectFaultLevelName
+        const sumTypeName = this.state.sumTypeName
 
-            }
-
-        }
-
-        const chartOption = {
-            title: {
-                text: `统计图`,
-                left:'40%',
-                top:'-2%',
-            },
-            tooltip: {
-                trigger: 'axis',
-                axisPointer: {
-                    type: 'cross',
-                    label: {
-                        backgroundColor: '#6a7985'
-                    }
-                }
-            },
-            grid:{
-                right:'20%',
-                top:'15%'
-            },
-            toolbox:{
-                show:true,
-                right:'25%',
-                feature:{
-                    magicType: {
-                        type: ['line', 'bar'],
-                        title:{
-                            line :'切换为折线图',
-                            bar :'切换为柱状图'
-                        },
-                        option:{
-                            line:{
-                                label: false
-                            }
-                        }
-                    },
-                    saveAsImage:{title : '保存为图片'},
-                }
-            },
-            legend: {
-                left:'83%',
-                top:'8%',
-                orient:'vertical',
-                icon:'roundRect',
-                align:'left',
-                data:()=>{
-                    try{
-                        return seriesConfig().legendConfig
-                    }
-                    catch (e) {
-
-                    }
-                }
-            },
-            xAxis: {
-                data: ()=>{
-                    try{
-                        return result.day_str
-                    }
-                    catch (e) {
-
-                    }
-                }
-            },
-            yAxis: {},
-            series: ()=>{
-                try{
-                   return  seriesConfig().sertiesConfig
-                }
-                catch (e) {
-
-                }
+        const timeStr = ()=>{
+            switch (this.state.dateType) {
+                case "day":
+                    return this.state.dayTime
+                case "week":
+                    return this.state.weekTime.replace(/,/g,'周 至 ').replace(/-/g,'第')+'周'
+                case "month":
+                    return this.state.monthTime
+                default:
+                    return ''
             }
         }
+        const chartTitle = `${platFormName} ${subOption==='faultType'?faultTypeName:faultLevelName} ${timeStr()} ${sumTypeName}统计图`
         return (
             <div className="App">
                 <div className="formBox">
                     <Space>
-                        <Select value={this.state.sumType} style={{width: 100}} onChange={(e) => this.sumTypeChange(e)}>
+                        <Select value={this.state.sumType} style={{width: 100}} onChange={(e,e1) => this.sumTypeChange(e,e1)}>
                             <Option value={1}>问题</Option>
                             <Option value={2}>追踪</Option>
                             <Option value={3}>工单</Option>
@@ -288,16 +210,16 @@ class App extends React.Component {
                         </Select>
                         {subOption === 'faultType' ? (
                             <Select value={this.state.selectFaultType} style={{width: 120}}
-                                    onChange={(e) => this.faultTypeChange(e)}>
-                                <Option value="-1">故障类型</Option>
+                                    onChange={(e,e1) => this.faultTypeChange(e,e1)}>
+                                <Option value="-1">所有类型</Option>
                                 {
                                     faultTypes.children.map(item => <Option value={item.code}
                                                                             key={item.code}>{item.title}</Option>)
                                 }
                             </Select>
                         ) : (<Select value={this.state.selectFaultLevel} style={{width: 120}}
-                                     onChange={(e) => this.faultLevelChange(e)}>
-                            <Option value="-1">故障级别</Option>
+                                     onChange={(e,e1) => this.faultLevelChange(e,e1)}>
+                            <Option value="-1">全部级别</Option>
                             <Option value="0">P0</Option>
                             <Option value="1">P1</Option>
                             <Option value="2">P2</Option>
@@ -306,23 +228,23 @@ class App extends React.Component {
                             <Option value="5">P5</Option>
                         </Select>)}
 
-                        <Select value={this.state.dateType} style={{width: 120}} onChange={(e) => this.dateTypeChange(e)}>
+                        <Select value={this.state.dateType} style={{width: 120}}
+                                onChange={(e) => this.dateTypeChange(e)}>
                             <Option value="day">天</Option>
                             <Option value="week">周</Option>
                             <Option value="month">月</Option>
                         </Select>
                         {
                             this.state.dateType === 'day' ?
-                                    <RangePicker value={this.state.dayValue}
-                                                 locale={{lang:{locale:'zh_cn'}}}
-                                                 onChange={(date, datestring) => this.datePickerChange(date, datestring)}/>
+                                <RangePicker value={this.state.dayValue}
+                                             onChange={(date, datestring) => this.datePickerChange(date, datestring)}/>
                                 : this.state.dateType === 'week' ?
-                                     <RangePicker picker='week' value={this.state.weekValue}
-                                                  onChange={(date, datestring) => this.datePickerChange(date, datestring)}/>
+                                <RangePicker picker='week' value={this.state.weekValue}
+                                             onChange={(date, datestring) => this.datePickerChange(date, datestring)}/>
                                 : this.state.dateType === 'month' ?
                                     <RangePicker picker='month' value={this.state.monthValue}
                                                  onChange={(date, datestring) => this.datePickerChange(date, datestring)}/>
-                                :null
+                                    : null
                         }
 
 
@@ -331,14 +253,12 @@ class App extends React.Component {
                     </Space>
 
                 </div>
-                <div className="chartBox">
-                    {
-                        this.state.chartData.day_str?(<ReactEcharts
-                            option={{...this.getOption(),...chartOption}}
-                        />):null
-                    }
-
-                </div>
+                <Mychart
+                    chartData={this.state.chartData}
+                    firstLoading={this.state.firstLoading}
+                    showLoading={this.state.showLoading}
+                    chartTitle={chartTitle}
+                />
             </div>
         );
     }

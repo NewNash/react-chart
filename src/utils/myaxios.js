@@ -5,9 +5,9 @@ const myaxios = axios.create({
     timeout: 4000,
 })
 myaxios.interceptors.request.use((config) => {
-        if (localStorage.getItem('token')) {
-            config.headers.token = localStorage.getItem('token')
-        }
+        // if (localStorage.getItem('token')) {
+        //     config.headers.token = localStorage.getItem('token')
+        // }
         return config
     }
 )

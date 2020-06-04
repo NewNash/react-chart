@@ -1,25 +1,18 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import {ConfigProvider } from 'antd'
-import zh from 'antd/es/locale/zh_CN'
-import './index.css';
+
+import {  ConfigProvider } from "antd";
 import App from './App';
-import * as serviceWorker from './serviceWorker';
-// import moment from 'moment';
-import 'moment/locale/zh-cn';
-const config={
-    locale:zh
-}
+import zhCN from "antd/es/locale/zh_CN";
+import moment from "moment";
+import "moment/locale/zh-cn";
+moment.locale("zh-cn");
+
 ReactDOM.render(
-    <ConfigProvider {...config}>
+    <ConfigProvider locale={zhCN}>
         <App />
     </ConfigProvider>
 
 ,
-  document.getElementById('root')
+  document.getElementById('chartBox')
 );
-
-// If you want your app to work offline and load faster, you can change
-// unregister() to register() below. Note this comes with some pitfalls.
-// Learn more about service workers: https://bit.ly/CRA-PWA
-serviceWorker.unregister();
